@@ -1,30 +1,52 @@
 # coding=utf-8
 
-from .entities.entity import Session, engine, Base
-from .entities.exam import Exam
+from flask import Flask, jsonify, request
 
-# generate database Schema
+from src.entities.entity import engine, Base, session
+from src.entities.exam import Exam, ExamSchema
+
+
+# Creatin the Flask aplication
+app = Flask(__name__)
+
+#if needed, generate database Schema
 Base.metadata.create_all(engine)
 
-# Start session
-session = Session()
+@app.route('/exams')
+def get_exams():
+	#fetching from the database
+	#session = Session()
+	#check for existing data
+	exams_objects = session.query(Exam).all()
 
+	#Transforming into JSON-serializable objects
+	schema = ExamSchema(many=True)
+	exams = schema.dump(exams_objects)
 
-#check for existing data
-exams = session.query(Exam).all()
-
-if len(exams) == 0:
-	# create a persist mock exam
-	python_exam = Exam("SQLAlchemy Exam","Test your Knowledge about SQLalchemy.","script")
-	session.add(python_exam)
-	session.commit()
+	#serializing as Json
 	session.close()
+	return jsonify(exams)
 
-	# reload exams
-	exams = session.query(Exam).all()
 
-# show existing exams
-print('### Exams:')
-for exam in exams:
-	print(f'({exam.id}) {exam.title} - {exam.description}')
 
+@app.route('/exams', methods=['POST'])
+def add_exam():
+	 # mount exam object
+	posted_exam = ExamSchema(only=('title', 'description'))\
+		.load(request.get_json())
+
+	# Create Temporal ID
+	exam = Exam(**posted_exam, created_by="HTTP post request")
+	exam.id = 1234  # Temporal ID
+
+	print("ID del objeto exam:",exam.id)
+	# persist exam
+	#session = Session()
+	#session.add(exam)
+	#session.commit()
+
+	#fresh_exam = session.query(Exam).get(exam.id)
+	#return created exam
+	new_exam = ExamSchema().dump(exam)
+	session.close()
+	return jsonify(new_exam), 201
