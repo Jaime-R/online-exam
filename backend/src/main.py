@@ -1,13 +1,15 @@
 # coding=utf-8
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 from src.entities.entity import engine, Base, session
 from src.entities.exam import Exam, ExamSchema
 
 
-# Creatin the Flask aplication
+# Creating the Flask aplication
 app = Flask(__name__)
+CORS(app)
 
 #if needed, generate database Schema
 Base.metadata.create_all(engine)
